@@ -1,0 +1,40 @@
+site_name: sysmodel
+site_description: Model and query software systems as Python.
+site_url: https://richardtoney.github.io/sysmodel
+repo_url: https://github.com/richardtoney/sysmodel
+repo_name: richardtoney/sysmodel
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: cyan
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            docstring_style: google
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Concepts: concepts.md
+  - Query Reference: query-reference.md
+  - Cypher Queries: cypher.md
+  - TUI Guide: tui.md
+  - Extending sysmodel: extending.md
+  - API Reference:
+      - sysmodel: api/sysmodel.md
+      - sysmodel.queries: api/queries.md
+      - sysmodel.graph: api/graph.md
+      - sysmodel.registry: api/registry.md
+      - sysmodel.exceptions: api/exceptions.md
