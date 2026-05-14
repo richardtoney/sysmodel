@@ -22,7 +22,6 @@ from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, ScrollableContainer, Vertical
-from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import (
     Button,
@@ -35,15 +34,11 @@ from textual.widgets import (
     ListItem,
     ListView,
     Static,
-    Tab,
-    TabbedContent,
-    TabPane,
-    Tree,
 )
 
-from sysmodel.exceptions import SysmodelError
-from sysmodel.models import Block, BlockType, DataClassification, Flow, RelType, System
 from sysmodel import queries
+from sysmodel.exceptions import SysmodelError
+from sysmodel.models import Block, BlockType, DataClassification, Flow, System
 
 logger = logging.getLogger(__name__)
 
@@ -145,41 +140,45 @@ def _resolve_module(target: str) -> types.ModuleType:
 
 
 # ---------------------------------------------------------------------------
-# Query tab definitions
+# Result formatters
 # ---------------------------------------------------------------------------
 
-# Each entry: (display_label, param_prompt_or_None, callable_taking(system, param))
-_TABS: dict[str, list[tuple[str, str | None, Any]]] = {
-    "INVENTORY": [
-        ("All blocks by type", None, lambda s, _: _blocks_table(list(s.blocks.values()))),
-        ("Block count summary", None, lambda s, _: _count_summary(s)),
-        ("Blocks with tag [key]=[value]", "tag key=value", _query_blocks_tag),
-        ("Blocks with metadata key [key]", "metadata key", _query_blocks_meta),
-    ],
-    "CONTAINMENT": [
-        ("Children of [block id]", "block id", lambda s, p: _blocks_table(queries.children_of(s, p))),
-        ("All descendants of [block id]", "block id", lambda s, p: _blocks_table(queries.descendants_of(s, p))),
-        ("Full ancestry of [block id]", "block id", lambda s, p: _blocks_table(queries.ancestors(s, p))),  # type: ignore[attr-defined]
-    ],
-    "SOFTWARE": [
-        ("All software in system", None, lambda s, _: _blocks_table(queries.blocks_of_type(s, BlockType.SOFTWARE))),
-        ("Software on [host id]", "host id", lambda s, p: _blocks_table(queries.software_on(s, p))),
-        ("All software with version", None, lambda s, _: _blocks_table(queries.blocks_with_metadata(s, "version"))),
-    ],
-    "DEPS": [
-        ("Dependencies of [block id]", "block id", lambda s, p: _blocks_table(queries.dependencies_of(s, p))),
-        ("Dependents of [block id]", "block id", lambda s, p: _blocks_table(queries.dependents_of(s, p))),
-        ("Relationships between [id] and [id]", "id1 id2 (space-separated)", _query_rels_between),
-    ],
-    "FLOWS": [
-        ("All flows", None, lambda s, _: _flows_table(list(s.flows.values()))),
-        ("Flows through [block id]", "block id", lambda s, p: _flows_table(queries.flows_through(s, p))),
-        ("Flows crossing boundary [id]", "boundary id", lambda s, p: _flows_table(queries.flows_crossing_boundary(s, p))),
-        ("Flows by classification [level]", "classification level", _query_flows_class),
-        ("Lineage for [block id]", "block id", _query_lineage),
-    ],
-    "CYPHER": [],
-}
+
+def _blocks_table(blocks: list[Block]) -> list[dict[str, str]]:
+    return [
+        {
+            "id": b.id,
+            "name": b.name,
+            "type": str(b.type.value if hasattr(b.type, "value") else b.type),
+            "tags": ", ".join(f"{k}={v}" for k, v in b.tags.items()),
+        }
+        for b in blocks
+    ]
+
+
+def _flows_table(flows: list[Flow]) -> list[dict[str, str]]:
+    return [
+        {
+            "id": f.id,
+            "name": f.name,
+            "classification": str(f.classification.value if hasattr(f.classification, "value") else f.classification),
+            "hops": " -> ".join(f.block_ids),
+        }
+        for f in flows
+    ]
+
+
+def _count_summary(system: System) -> list[dict[str, str]]:
+    counts: dict[str, int] = {}
+    for block in system.blocks.values():
+        type_str = str(block.type.value if hasattr(block.type, "value") else block.type)
+        counts[type_str] = counts.get(type_str, 0) + 1
+    return [{"type": t, "count": str(c)} for t, c in sorted(counts.items())]
+
+
+# ---------------------------------------------------------------------------
+# Query tab helpers
+# ---------------------------------------------------------------------------
 
 
 def _query_blocks_tag(system: System, param: str) -> list[dict[str, str]]:
@@ -229,40 +228,41 @@ def _query_lineage(system: System, param: str) -> list[dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Result formatters
+# Query tab definitions (must appear after all referenced callables)
 # ---------------------------------------------------------------------------
 
-
-def _blocks_table(blocks: list[Block]) -> list[dict[str, str]]:
-    return [
-        {
-            "id": b.id,
-            "name": b.name,
-            "type": str(b.type.value if hasattr(b.type, "value") else b.type),
-            "tags": ", ".join(f"{k}={v}" for k, v in b.tags.items()),
-        }
-        for b in blocks
-    ]
-
-
-def _flows_table(flows: list[Flow]) -> list[dict[str, str]]:
-    return [
-        {
-            "id": f.id,
-            "name": f.name,
-            "classification": str(f.classification.value if hasattr(f.classification, "value") else f.classification),
-            "hops": " -> ".join(f.block_ids),
-        }
-        for f in flows
-    ]
-
-
-def _count_summary(system: System) -> list[dict[str, str]]:
-    counts: dict[str, int] = {}
-    for block in system.blocks.values():
-        type_str = str(block.type.value if hasattr(block.type, "value") else block.type)
-        counts[type_str] = counts.get(type_str, 0) + 1
-    return [{"type": t, "count": str(c)} for t, c in sorted(counts.items())]
+# Each entry: (display_label, param_prompt_or_None, callable_taking(system, param))
+_TABS: dict[str, list[tuple[str, str | None, Any]]] = {
+    "INVENTORY": [
+        ("All blocks by type", None, lambda s, _: _blocks_table(list(s.blocks.values()))),
+        ("Block count summary", None, lambda s, _: _count_summary(s)),
+        ("Blocks with tag [key]=[value]", "tag key=value", _query_blocks_tag),
+        ("Blocks with metadata key [key]", "metadata key", _query_blocks_meta),
+    ],
+    "CONTAINMENT": [
+        ("Children of [block id]", "block id", lambda s, p: _blocks_table(queries.children_of(s, p))),
+        ("All descendants of [block id]", "block id", lambda s, p: _blocks_table(queries.descendants_of(s, p))),
+        ("Full ancestry of [block id]", "block id", lambda s, p: _blocks_table(s.ancestors(p))),
+    ],
+    "SOFTWARE": [
+        ("All software in system", None, lambda s, _: _blocks_table(queries.blocks_of_type(s, BlockType.SOFTWARE))),
+        ("Software on [host id]", "host id", lambda s, p: _blocks_table(queries.software_on(s, p))),
+        ("All software with version", None, lambda s, _: _blocks_table(queries.blocks_with_metadata(s, "version"))),
+    ],
+    "DEPS": [
+        ("Dependencies of [block id]", "block id", lambda s, p: _blocks_table(queries.dependencies_of(s, p))),
+        ("Dependents of [block id]", "block id", lambda s, p: _blocks_table(queries.dependents_of(s, p))),
+        ("Relationships between [id] and [id]", "id1 id2 (space-separated)", _query_rels_between),
+    ],
+    "FLOWS": [
+        ("All flows", None, lambda s, _: _flows_table(list(s.flows.values()))),
+        ("Flows through [block id]", "block id", lambda s, p: _flows_table(s.flows_through(p))),
+        ("Flows crossing boundary [id]", "boundary id", lambda s, p: _flows_table(queries.flows_crossing_boundary(s, p))),
+        ("Flows by classification [level]", "classification level", _query_flows_class),
+        ("Lineage for [block id]", "block id", _query_lineage),
+    ],
+    "CYPHER": [],
+}
 
 
 # ---------------------------------------------------------------------------

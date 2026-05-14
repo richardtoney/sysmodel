@@ -7,6 +7,7 @@ Public API::
     from sysmodel.graph import KuzuGraph   # optional: pip install sysmodel[graph]
 """
 
+from sysmodel import queries
 from sysmodel._version import __version__
 from sysmodel.exceptions import (
     BlockNotFoundError,
@@ -38,7 +39,6 @@ from sysmodel.registry import (
     get_schema,
     register_schema,
 )
-from sysmodel import queries
 
 __all__ = [
     "__version__",

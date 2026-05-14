@@ -6,7 +6,7 @@ results. Uses glom for collection projection and grouping.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from glom import T, glom
 
@@ -417,16 +417,19 @@ def summarize_blocks(blocks: list[Block]) -> list[dict[str, Any]]:
     Returns:
         List of dicts with keys: id, name, type, tags.
     """
-    return glom(
-        blocks,
-        [
-            {
-                "id": T.id,
-                "name": T.name,
-                "type": (T.type, str),
-                "tags": T.tags,
-            }
-        ],
+    return cast(
+        list[dict[str, Any]],
+        glom(
+            blocks,
+            [
+                {
+                    "id": T.id,
+                    "name": T.name,
+                    "type": (T.type, str),
+                    "tags": T.tags,
+                }
+            ],
+        ),
     )
 
 

@@ -55,7 +55,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -e ".[dev]" --quiet
-      - run: pytest tests/ -k "not test_graph" --cov=sysmodel --cov-report=term-missing
+      - run: pytest tests/ -k "not test_graph" --cov=sysmodel --cov-report=term-missing --override-ini="addopts="
 
   docs:
     name: Build Docs
