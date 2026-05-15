@@ -9,15 +9,9 @@ import pytest
 
 kuzu = pytest.importorskip("kuzu")
 
-from sysmodel.exceptions import GraphLoadError, GraphNotAvailableError
+from sysmodel.exceptions import GraphNotAvailableError
 from sysmodel.graph import KuzuGraph
-from sysmodel.models import (
-    Block,
-    BlockType,
-    Flow,
-    FlowHop,
-    System,
-)
+from sysmodel.models import System
 
 
 def test_load_block_count_matches(
