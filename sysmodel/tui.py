@@ -47,8 +47,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 try:
-    from sysmodel.graph import KuzuGraph
     from sysmodel.graph import _KUZU_AVAILABLE as _GRAPH_AVAILABLE
+    from sysmodel.graph import KuzuGraph
 except Exception:  # noqa: BLE001 — broad catch: graph import failure must not crash TUI
     _GRAPH_AVAILABLE = False
     KuzuGraph = None  # type: ignore[assignment,misc]
@@ -77,7 +77,7 @@ def load_module_from_path(file_path: str) -> types.ModuleType:
         raise SysmodelError(f"Cannot load module from path: {file_path}")
     module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        spec.loader.exec_module(module)
     except Exception as exc:
         raise SysmodelError(f"Error executing {file_path}: {exc}") from exc
     return module
@@ -406,14 +406,14 @@ class SysmodelApp(App[None]):
                     )
                 )
         else:
-            for label, prompt, fn in items:
+            for label, _prompt, _fn in items:
                 lv.append(ListItem(Label(label), name=label))
 
     @on(ListView.Selected)
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         tab = self._selected_tab
         items = _TABS.get(tab, [])
-        label = str(event.item.query_one(Label).renderable)
+        label = str(event.item.query_one(Label).renderable)  # type: ignore[attr-defined]
         for item_label, prompt, fn in items:
             if item_label == label:
                 if prompt is not None:
