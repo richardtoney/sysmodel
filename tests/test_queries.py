@@ -73,7 +73,7 @@ def test_children_of_all(software_system: System) -> None:
 
 
 def test_children_of_filtered_by_type(software_system: System) -> None:
-tml    sw_children = queries.children_of(software_system, "srv-01", BlockType.SOFTWARE)
+    sw_children = queries.children_of(software_system, "srv-01", BlockType.SOFTWARE)
     assert len(sw_children) == 1
     assert sw_children[0].id == "sw-nginx"
 
