@@ -10,6 +10,7 @@ Install the graph extra to enable::
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import shutil
@@ -130,14 +131,15 @@ class KuzuGraph:
 
         self._temp_dir: str | None = None
         if db_path == ":memory:":
+            # kuzu>=0.11 rejects an existing directory; use a non-existent subdirectory
             self._temp_dir = tempfile.mkdtemp(prefix="sysmodel_kuzu_")
-            actual_path = self._temp_dir
+            actual_path = self._temp_dir + "/db"
         else:
             actual_path = db_path
 
         try:
-            self._db = kuzu.Database(actual_path)  # type: ignore[name-defined]
-            self._conn = kuzu.Connection(self._db)  # type: ignore[name-defined]
+            self._db = kuzu.Database(actual_path)
+            self._conn = kuzu.Connection(self._db)
         except Exception as exc:
             self._cleanup_temp()
             raise GraphLoadError(str(exc)) from exc
@@ -163,7 +165,7 @@ class KuzuGraph:
         for stmt in _DROP_STMTS + _CREATE_STMTS:
             self._run(stmt)
 
-    def load(self, system: "System") -> None:
+    def load(self, system: System) -> None:
         """Export a System into Kuzu.
 
         Idempotent — clears all data before loading so calling load() twice
@@ -193,12 +195,12 @@ class KuzuGraph:
             )
             self._run(
                 "CREATE (:Block {id: $id, name: $name, type: $type, "
-                "description: $desc, tags: $tags, metadata: $meta})",
+                "description: $blk_desc, tags: $tags, metadata: $meta})",
                 {
                     "id": block.id,
                     "name": block.name,
                     "type": type_str,
-                    "desc": block.description,
+                    "blk_desc": block.description,
                     "tags": json.dumps(block.tags),
                     "meta": json.dumps(block.metadata),
                 },
@@ -228,12 +230,12 @@ class KuzuGraph:
                 else flow.classification
             )
             self._run(
-                "CREATE (:Flow {id: $id, name: $name, description: $desc, "
+                "CREATE (:Flow {id: $id, name: $name, description: $flow_desc, "
                 "classification: $cls, protocol: $proto})",
                 {
                     "id": flow.id,
                     "name": flow.name,
-                    "desc": flow.description,
+                    "flow_desc": flow.description,
                     "cls": classification_str,
                     "proto": flow.protocol,
                 },
@@ -295,29 +297,23 @@ class KuzuGraph:
         while result.has_next():
             raw_row = result.get_next()
             row: dict[str, Any] = {}
-            for col, val in zip(columns, raw_row):
+            for col, val in zip(columns, raw_row, strict=False):
                 if isinstance(val, str) and col in ("tags", "metadata"):
-                    try:
+                    with contextlib.suppress(json.JSONDecodeError, ValueError):
                         val = json.loads(val)
-                    except (json.JSONDecodeError, ValueError):
-                        pass
                 row[col] = val
             rows.append(row)
         return rows
 
     def close(self) -> None:
         """Close the Kuzu connection and release resources."""
-        try:
+        with contextlib.suppress(AttributeError):
             del self._conn
-        except AttributeError:
-            pass
-        try:
+        with contextlib.suppress(AttributeError):
             del self._db
-        except AttributeError:
-            pass
         self._cleanup_temp()
 
-    def __enter__(self) -> "KuzuGraph":
+    def __enter__(self) -> KuzuGraph:
         """Support use as a context manager."""
         return self
 

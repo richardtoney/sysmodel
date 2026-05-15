@@ -1,17 +1,13 @@
-"""Tests for sysmodel.graph (Kuzu integration).
-
-All tests in this file require kuzu to be installed.
-If kuzu is not available, the entire module is skipped.
-"""
+"""Tests for sysmodel.graph (Kuzu integration)."""
 from __future__ import annotations
 
 import pytest
 
 kuzu = pytest.importorskip("kuzu")
 
-from sysmodel.exceptions import GraphNotAvailableError
-from sysmodel.graph import KuzuGraph
-from sysmodel.models import System
+from sysmodel.exceptions import GraphNotAvailableError  # noqa: E402
+from sysmodel.graph import KuzuGraph  # noqa: E402
+from sysmodel.models import System  # noqa: E402
 
 
 def test_load_block_count_matches(
@@ -38,7 +34,7 @@ def test_load_flow_count_matches(flow_system: System) -> None:
 def test_load_idempotent(software_system: System) -> None:
     with KuzuGraph() as g:
         g.load(software_system)
-        g.load(software_system)  # second load should not duplicate
+        g.load(software_system)
         result = g.query("MATCH (b:Block) RETURN COUNT(b) AS cnt")
         assert result[0]["cnt"] == len(software_system.blocks)
 
@@ -107,7 +103,6 @@ def test_context_manager_closes_cleanly(software_system: System) -> None:
         g.load(software_system)
         result = g.query("MATCH (b:Block) RETURN COUNT(b) AS cnt")
         assert result[0]["cnt"] > 0
-    # No exception should propagate after close
 
 
 def test_graph_not_available_error_without_kuzu() -> None:

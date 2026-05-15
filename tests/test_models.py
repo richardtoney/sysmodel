@@ -1,4 +1,4 @@
-"""Tests for sysmodel.models — Block, Relationship, Flow, StateMachine, System."""
+"""Tests for sysmodel.models."""
 from __future__ import annotations
 
 import pytest
@@ -14,18 +14,14 @@ from sysmodel.exceptions import (
 from sysmodel.models import (
     Block,
     BlockType,
-    DataClassification,
     Flow,
     FlowHop,
     RelType,
     State,
     StateMachine,
     System,
-    Transition,
 )
 
-
-# --- Block validation ---
 
 def test_block_id_rejects_spaces() -> None:
     with pytest.raises(InvalidBlockIdError):
@@ -42,8 +38,6 @@ def test_block_custom_type_string_allowed() -> None:
     assert b.type == "firewall"
 
 
-# --- System.add ---
-
 def test_add_block_returns_block(minimal_system: System) -> None:
     s = System(name="Test")
     b = Block(id="x-01", name="X", type=BlockType.SERVICE)
@@ -59,8 +53,6 @@ def test_add_duplicate_raises_duplicate_block_error() -> None:
     assert exc_info.value.block_id == "dup-01"
 
 
-# --- System.resolve / get ---
-
 def test_resolve_existing_block(minimal_system: System) -> None:
     block = minimal_system.resolve("svc-01")
     assert block.id == "svc-01"
@@ -75,8 +67,6 @@ def test_resolve_missing_raises_block_not_found_error(minimal_system: System) ->
 def test_get_missing_returns_none(minimal_system: System) -> None:
     assert minimal_system.get("no-such-block") is None
 
-
-# --- Relationship management ---
 
 def test_relate_missing_source_raises() -> None:
     s = System(name="Test")
@@ -125,8 +115,6 @@ def test_connects_to_shorthand() -> None:
     assert rel.metadata["protocol"] == "HTTPS"
 
 
-# --- Flow registration ---
-
 def test_add_flow_valid(flow_system: System) -> None:
     assert "flow-01" in flow_system.flows
     assert len(flow_system.flows["flow-01"].hops) == 4
@@ -146,8 +134,6 @@ def test_add_flow_missing_hop_raises_flow_reference_error() -> None:
     assert exc_info.value.flow_id == "bad-flow"
     assert exc_info.value.block_id == "ghost"
 
-
-# --- StateMachine registration ---
 
 def test_add_state_machine_valid() -> None:
     s = System(name="Test")
@@ -169,12 +155,9 @@ def test_add_state_machine_missing_block_raises() -> None:
         s.add_state_machine(sm)
 
 
-# --- Traversal ---
-
 def test_descendants_bfs_order(software_system: System) -> None:
     descendants = software_system.descendants("acct-01")
     ids = [b.id for b in descendants]
-    # BFS: net-01 before srv-01, srv-01 before sw-nginx
     assert "net-01" in ids
     assert "srv-01" in ids
     assert "sw-nginx" in ids
@@ -218,8 +201,6 @@ def test_flows_through(flow_system: System) -> None:
     assert flows[0].id == "flow-01"
 
 
-# --- Validation ---
-
 def test_validate_model_clean_returns_empty_list(minimal_system: System) -> None:
     errors = minimal_system.validate_model()
     assert errors == []
@@ -255,14 +236,11 @@ def test_validate_model_strict_raises_metadata_validation_error() -> None:
 
 def test_validate_model_collects_all_errors() -> None:
     s = System(name="Test")
-    # Two blocks each missing required metadata
     s.add(Block(id="ec2-01", name="Web", type=BlockType.EC2, metadata={}))
     s.add(Block(id="rds-01", name="DB", type=BlockType.RDS, metadata={}))
     errors = s.validate_model()
-    assert len(errors) >= 3  # ec2 needs instance_type; rds needs engine + version
+    assert len(errors) >= 3
 
-
-# --- Serialization ---
 
 def test_to_dict_round_trip(minimal_system: System) -> None:
     data = minimal_system.to_dict()

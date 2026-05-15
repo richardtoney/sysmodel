@@ -15,11 +15,10 @@ from sysmodel.models import (
     BlockType,
     DataClassification,
     Flow,
-    RelType,
     Relationship,
+    RelType,
     System,
 )
-
 
 # ---------------------------------------------------------------------------
 # Block queries
@@ -27,15 +26,7 @@ from sysmodel.models import (
 
 
 def blocks_of_type(system: System, *types: BlockType | str) -> list[Block]:
-    """Return all blocks matching one or more BlockType values.
-
-    Args:
-        system: The System to query.
-        *types: One or more BlockType values or custom type strings.
-
-    Returns:
-        Blocks whose type matches any of the given types.
-    """
+    """Return all blocks matching one or more BlockType values."""
     type_strs = {t.value if isinstance(t, BlockType) else t for t in types}
     return [
         b
@@ -49,21 +40,7 @@ def blocks_with_tag(
     key: str,
     value: str | None = None,
 ) -> list[Block]:
-    """Return blocks that have a tag key present, optionally filtered by value.
-
-    Args:
-        system: The System to query.
-        key: The tag key to search for.
-        value: If given, only blocks where tags[key] == value are returned.
-
-    Returns:
-        Matching Block objects.
-
-    Examples::
-
-        blocks_with_tag(s, "env")           # all blocks with any env tag
-        blocks_with_tag(s, "env", "prod")   # only env=prod blocks
-    """
+    """Return blocks that have a tag key present, optionally filtered by value."""
     result = [b for b in system.blocks.values() if key in b.tags]
     if value is not None:
         result = [b for b in result if b.tags[key] == value]
@@ -75,16 +52,7 @@ def blocks_with_metadata(
     key: str,
     value: Any = None,
 ) -> list[Block]:
-    """Return blocks that have a metadata key present, optionally filtered by value.
-
-    Args:
-        system: The System to query.
-        key: The metadata key to search for.
-        value: If given, only blocks where metadata[key] == value are returned.
-
-    Returns:
-        Matching Block objects.
-    """
+    """Return blocks that have a metadata key present, optionally filtered by value."""
     result = [b for b in system.blocks.values() if key in b.metadata]
     if value is not None:
         result = [b for b in result if b.metadata[key] == value]
@@ -96,16 +64,7 @@ def children_of(
     parent_id: str,
     block_type: BlockType | str | None = None,
 ) -> list[Block]:
-    """Return direct CONTAINS children of parent_id, optionally filtered by type.
-
-    Args:
-        system: The System to query.
-        parent_id: The parent block's ID.
-        block_type: Optional type filter.
-
-    Returns:
-        List of directly contained Block objects.
-    """
+    """Return direct CONTAINS children of parent_id, optionally filtered by type."""
     children = system.direct_children(parent_id)
     if block_type is not None:
         target_str = (
@@ -125,16 +84,7 @@ def descendants_of(
     root_id: str,
     block_type: BlockType | str | None = None,
 ) -> list[Block]:
-    """Return all CONTAINS descendants of root_id, optionally filtered by type.
-
-    Args:
-        system: The System to query.
-        root_id: The root block's ID.
-        block_type: Optional type filter.
-
-    Returns:
-        Descendant Block objects in BFS order.
-    """
+    """Return all CONTAINS descendants of root_id, optionally filtered by type."""
     all_desc = system.descendants(root_id)
     if block_type is not None:
         target_str = (
@@ -150,21 +100,7 @@ def descendants_of(
 
 
 def software_on(system: System, host_id: str) -> list[Block]:
-    """Return software blocks on a host, checking both CONTAINS and DEPLOYED_ON.
-
-    Checks:
-    - CONTAINS children of type SOFTWARE
-    - Blocks with DEPLOYED_ON pointing at host_id
-
-    Deduplicates results preserving order (CONTAINS first).
-
-    Args:
-        system: The System to query.
-        host_id: The host block's ID.
-
-    Returns:
-        SOFTWARE Block objects on the host, deduplicated.
-    """
+    """Return software blocks on a host, checking both CONTAINS and DEPLOYED_ON."""
     seen: set[str] = set()
     result: list[Block] = []
 
@@ -184,18 +120,7 @@ def software_on(system: System, host_id: str) -> list[Block]:
 
 
 def all_software_in(system: System, root_id: str) -> list[Block]:
-    """Return all software reachable from root_id.
-
-    Finds all blocks in the subtree via CONTAINS (including root), then calls
-    software_on() for each. Deduplicates preserving first-seen order.
-
-    Args:
-        system: The System to query.
-        root_id: The root block's ID.
-
-    Returns:
-        All SOFTWARE blocks reachable from root_id, deduplicated.
-    """
+    """Return all software reachable from root_id."""
     candidates = [system.blocks[root_id]] + system.descendants(root_id)
     seen: set[str] = set()
     result: list[Block] = []
@@ -212,17 +137,7 @@ def find_by_name(
     name: str,
     exact: bool = True,
 ) -> list[Block]:
-    """Find blocks by name.
-
-    Args:
-        system: The System to query.
-        name: The name to search for.
-        exact: If True (default), matches the full name exactly.
-            If False, performs a case-insensitive substring match.
-
-    Returns:
-        Matching Block objects.
-    """
+    """Find blocks by name."""
     if exact:
         return [b for b in system.blocks.values() if b.name == name]
     name_lower = name.lower()
@@ -230,15 +145,7 @@ def find_by_name(
 
 
 def parent_of(system: System, block_id: str) -> Block | None:
-    """Return the direct CONTAINS parent, or None if root-level.
-
-    Args:
-        system: The System to query.
-        block_id: The block whose parent to find.
-
-    Returns:
-        The parent Block, or None.
-    """
+    """Return the direct CONTAINS parent, or None if root-level."""
     parents = system.relationships_to(block_id, RelType.CONTAINS)
     if not parents:
         return None
@@ -246,15 +153,7 @@ def parent_of(system: System, block_id: str) -> Block | None:
 
 
 def account_of(system: System, block_id: str) -> Block | None:
-    """Walk ancestors to find the nearest ACCOUNT block, or None.
-
-    Args:
-        system: The System to query.
-        block_id: The starting block's ID.
-
-    Returns:
-        The nearest ACCOUNT ancestor Block, or None.
-    """
+    """Walk ancestors to find the nearest ACCOUNT block, or None."""
     for ancestor in system.ancestors(block_id):
         type_str = (
             ancestor.type.value
@@ -272,29 +171,13 @@ def account_of(system: System, block_id: str) -> Block | None:
 
 
 def dependencies_of(system: System, block_id: str) -> list[Block]:
-    """Return blocks that block_id depends on (outbound DEPENDS_ON).
-
-    Args:
-        system: The System to query.
-        block_id: The block whose dependencies to find.
-
-    Returns:
-        Blocks that block_id directly depends on.
-    """
+    """Return blocks that block_id depends on (outbound DEPENDS_ON)."""
     rels = system.relationships_from(block_id, RelType.DEPENDS_ON)
     return [system.blocks[r.target_id] for r in rels if r.target_id in system.blocks]
 
 
 def dependents_of(system: System, block_id: str) -> list[Block]:
-    """Return blocks that depend on block_id (inbound DEPENDS_ON).
-
-    Args:
-        system: The System to query.
-        block_id: The block to find dependents of.
-
-    Returns:
-        Blocks that directly depend on block_id.
-    """
+    """Return blocks that depend on block_id (inbound DEPENDS_ON)."""
     rels = system.relationships_to(block_id, RelType.DEPENDS_ON)
     return [system.blocks[r.source_id] for r in rels if r.source_id in system.blocks]
 
@@ -304,16 +187,7 @@ def relationships_between(
     block_a_id: str,
     block_b_id: str,
 ) -> list[Relationship]:
-    """Return all relationships in either direction between two blocks.
-
-    Args:
-        system: The System to query.
-        block_a_id: One block's ID.
-        block_b_id: The other block's ID.
-
-    Returns:
-        All Relationship objects connecting the two blocks (either direction).
-    """
+    """Return all relationships in either direction between two blocks."""
     return [
         r
         for r in system.relationships
@@ -331,15 +205,7 @@ def flows_of_classification(
     system: System,
     classification: DataClassification,
 ) -> list[Flow]:
-    """Return all flows carrying data at the given classification level.
-
-    Args:
-        system: The System to query.
-        classification: The DataClassification to filter by.
-
-    Returns:
-        Matching Flow objects.
-    """
+    """Return all flows carrying data at the given classification level."""
     return [
         f
         for f in system.flows.values()
@@ -351,17 +217,7 @@ def flows_crossing_boundary(
     system: System,
     boundary_id: str,
 ) -> list[Flow]:
-    """Return flows where at least one hop is inside the boundary and one is outside.
-
-    A block is "inside" if it is a CONTAINS descendant of boundary_id.
-
-    Args:
-        system: The System to query.
-        boundary_id: The boundary block's ID.
-
-    Returns:
-        Flows that cross the boundary.
-    """
+    """Return flows where at least one hop is inside the boundary and one is outside."""
     inside_ids = {b.id for b in system.descendants(boundary_id)}
     result: list[Flow] = []
     for flow in system.flows.values():
@@ -377,19 +233,7 @@ def lineage_for(
     system: System,
     block_id: str,
 ) -> dict[str, list[Flow]]:
-    """Return flows where block_id appears, split into upstream and downstream.
-
-    Upstream flows are those where block_id is not the first hop (something
-    flows into it). Downstream flows are those where block_id is not the
-    last hop (something flows out of it).
-
-    Args:
-        system: The System to query.
-        block_id: The block to find lineage for.
-
-    Returns:
-        Dict with keys ``upstream`` and ``downstream``, each a list of Flow.
-    """
+    """Return flows where block_id appears, split into upstream and downstream."""
     upstream: list[Flow] = []
     downstream: list[Flow] = []
     for flow in system.flows.values():
@@ -409,14 +253,7 @@ def lineage_for(
 
 
 def summarize_blocks(blocks: list[Block]) -> list[dict[str, Any]]:
-    """Project blocks to lightweight summary dicts.
-
-    Args:
-        blocks: List of Block objects to summarize.
-
-    Returns:
-        List of dicts with keys: id, name, type, tags.
-    """
+    """Project blocks to lightweight summary dicts."""
     return cast(
         list[dict[str, Any]],
         glom(
@@ -436,14 +273,7 @@ def summarize_blocks(blocks: list[Block]) -> list[dict[str, Any]]:
 def group_by_type(
     blocks: list[Block],
 ) -> dict[str, list[Block]]:
-    """Group blocks by their type value string.
-
-    Args:
-        blocks: List of Block objects to group.
-
-    Returns:
-        Dict mapping type string to list of Blocks.
-    """
+    """Group blocks by their type value string."""
     result: dict[str, list[Block]] = {}
     for block in blocks:
         key = block.type.value if isinstance(block.type, BlockType) else block.type
@@ -455,17 +285,7 @@ def group_by_tag(
     blocks: list[Block],
     tag_key: str,
 ) -> dict[str, list[Block]]:
-    """Group blocks by the value of a tag key.
-
-    Blocks missing the key are grouped under ``__untagged__``.
-
-    Args:
-        blocks: List of Block objects to group.
-        tag_key: The tag key to group by.
-
-    Returns:
-        Dict mapping tag value (or ``__untagged__``) to list of Blocks.
-    """
+    """Group blocks by the value of a tag key."""
     result: dict[str, list[Block]] = {}
     for block in blocks:
         key = block.tags.get(tag_key, "__untagged__")

@@ -1,5 +1,4 @@
 """Tests for sysmodel.registry."""
-import pytest
 
 from sysmodel.registry import (
     METADATA_REGISTRY,
@@ -54,7 +53,6 @@ def test_register_schema_replaces_existing() -> None:
     schema = get_schema("job")
     assert schema is not None
     assert "executor" in schema.required
-    # Restore original so other tests are not affected
     register_schema("job", MetadataSchema(allowed={"schedule", "language", "framework", "timeout_s"}))
 
 

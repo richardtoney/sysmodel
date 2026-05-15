@@ -1,8 +1,7 @@
 """Tests for sysmodel.queries."""
 from __future__ import annotations
 
-import pytest
-
+from sysmodel import queries
 from sysmodel.models import (
     Block,
     BlockType,
@@ -11,12 +10,7 @@ from sysmodel.models import (
     FlowHop,
     System,
 )
-from sysmodel import queries
 
-
-# ---------------------------------------------------------------------------
-# Block queries
-# ---------------------------------------------------------------------------
 
 def test_blocks_of_type_single(software_system: System) -> None:
     result = queries.blocks_of_type(software_system, BlockType.SOFTWARE)
@@ -79,7 +73,7 @@ def test_children_of_all(software_system: System) -> None:
 
 
 def test_children_of_filtered_by_type(software_system: System) -> None:
-    sw_children = queries.children_of(software_system, "srv-01", BlockType.SOFTWARE)
+tml    sw_children = queries.children_of(software_system, "srv-01", BlockType.SOFTWARE)
     assert len(sw_children) == 1
     assert sw_children[0].id == "sw-nginx"
 
@@ -107,7 +101,6 @@ def test_software_on_via_deployed_on(software_system: System) -> None:
 
 
 def test_software_on_deduplicates_both_edges() -> None:
-    """A block added via both CONTAINS and DEPLOYED_ON appears only once."""
     s = System(name="Dedup")
     s.add(Block(id="host", name="Host", type=BlockType.SERVER))
     s.add(Block(id="sw", name="SW", type=BlockType.SOFTWARE, metadata={"version": "1"}))
@@ -159,10 +152,6 @@ def test_account_of_no_account_returns_none(dependency_system: System) -> None:
     assert result is None
 
 
-# ---------------------------------------------------------------------------
-# Relationship queries
-# ---------------------------------------------------------------------------
-
 def test_dependencies_of(dependency_system: System) -> None:
     deps = queries.dependencies_of(dependency_system, "svc-a")
     ids = {b.id for b in deps}
@@ -182,10 +171,6 @@ def test_relationships_between_both_directions(minimal_system: System) -> None:
     assert len(rels_reversed) == 1
 
 
-# ---------------------------------------------------------------------------
-# Flow queries
-# ---------------------------------------------------------------------------
-
 def test_flows_of_classification(flow_system: System) -> None:
     result = queries.flows_of_classification(flow_system, DataClassification.INTERNAL)
     assert len(result) == 1
@@ -199,7 +184,6 @@ def test_flows_crossing_boundary_detects_crossing(flow_system: System) -> None:
 
 
 def test_flows_crossing_boundary_no_false_positives(flow_system: System) -> None:
-    # Flow entirely inside boundary should not appear
     flow_system.add_flow(
         Flow(
             id="flow-inside",
@@ -214,13 +198,11 @@ def test_flows_crossing_boundary_no_false_positives(flow_system: System) -> None
 
 def test_lineage_for_upstream(flow_system: System) -> None:
     lineage = queries.lineage_for(flow_system, "node-2")
-    # node-2 is not the first hop → it has upstream
     assert len(lineage["upstream"]) == 1
 
 
 def test_lineage_for_downstream(flow_system: System) -> None:
     lineage = queries.lineage_for(flow_system, "node-3")
-    # node-3 is not the last hop → it has downstream
     assert len(lineage["downstream"]) == 1
 
 
@@ -233,10 +215,6 @@ def test_lineage_for_sink_node_no_downstream(flow_system: System) -> None:
     lineage = queries.lineage_for(flow_system, "node-4")
     assert lineage["downstream"] == []
 
-
-# ---------------------------------------------------------------------------
-# Projection helpers
-# ---------------------------------------------------------------------------
 
 def test_summarize_blocks_shape(software_system: System) -> None:
     blocks = list(software_system.blocks.values())

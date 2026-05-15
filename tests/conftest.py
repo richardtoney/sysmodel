@@ -1,7 +1,4 @@
-"""Shared pytest fixtures for sysmodel tests.
-
-All test fixtures live here. No test file builds its own System from scratch.
-"""
+"""Shared pytest fixtures for sysmodel tests."""
 from __future__ import annotations
 
 import pytest
@@ -12,17 +9,12 @@ from sysmodel.models import (
     DataClassification,
     Flow,
     FlowHop,
-    RelType,
-    StateMachine,
-    State,
-    Transition,
     System,
 )
 
 
 @pytest.fixture
 def minimal_system() -> System:
-    """Two blocks, one relationship. Simplest valid system."""
     s = System(name="Minimal System")
     s.add(Block(id="svc-01", name="API Service", type=BlockType.SERVICE))
     s.add(
@@ -39,10 +31,6 @@ def minimal_system() -> System:
 
 @pytest.fixture
 def software_system() -> System:
-    """Three-layer system for software_on and all_software_in tests.
-
-    account -> subnet -> server -> (SOFTWARE via CONTAINS and DEPLOYED_ON)
-    """
     s = System(name="Software System")
     s.add(Block(id="acct-01", name="Primary Account", type=BlockType.ACCOUNT))
     s.add(
@@ -54,7 +42,6 @@ def software_system() -> System:
         )
     )
     s.add(Block(id="srv-01", name="App Server", type=BlockType.SERVER))
-    # Software added via CONTAINS
     s.add(
         Block(
             id="sw-nginx",
@@ -63,7 +50,6 @@ def software_system() -> System:
             metadata={"version": "1.25"},
         )
     )
-    # Software added via DEPLOYED_ON
     s.add(
         Block(
             id="sw-app",
@@ -81,10 +67,6 @@ def software_system() -> System:
 
 @pytest.fixture
 def dependency_system() -> System:
-    """A -> B -> C dependency chain for traversal tests.
-
-    Also includes D -> A for dependents_of tests.
-    """
     s = System(name="Dependency System")
     s.add(Block(id="svc-a", name="Service A", type=BlockType.SERVICE))
     s.add(Block(id="svc-b", name="Service B", type=BlockType.SERVICE))
@@ -105,11 +87,6 @@ def dependency_system() -> System:
 
 @pytest.fixture
 def flow_system() -> System:
-    """System with a multi-hop flow crossing a boundary.
-
-    Boundary contains node-2 and node-3.
-    Flow path: node-1 (outside) -> node-2 (inside) -> node-3 (inside) -> node-4 (outside).
-    """
     s = System(name="Flow System")
     s.add(Block(id="node-1", name="External Client", type=BlockType.ACTOR))
     s.add(
@@ -139,7 +116,6 @@ def flow_system() -> System:
 
 @pytest.fixture
 def kuzu_graph(software_system: System):  # type: ignore[no-untyped-def]
-    """In-memory KuzuGraph loaded with software_system. Closes after test."""
     pytest.importorskip("kuzu")
     from sysmodel.graph import KuzuGraph
 

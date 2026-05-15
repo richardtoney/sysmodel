@@ -5,9 +5,8 @@ Imports only from sysmodel.exceptions and sysmodel.registry.
 
 from __future__ import annotations
 
-import json
 from collections import deque
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 from pydantic import BaseModel, field_validator
@@ -23,7 +22,7 @@ from sysmodel.exceptions import (
 from sysmodel.registry import validate_metadata
 
 
-class BlockType(str, Enum):
+class BlockType(StrEnum):
     """Enumeration of built-in block types."""
 
     # Cloud infrastructure
@@ -49,7 +48,7 @@ class BlockType(str, Enum):
     JOB = "job"
 
 
-class RelType(str, Enum):
+class RelType(StrEnum):
     """Enumeration of built-in relationship types."""
 
     CONTAINS = "contains"
@@ -61,7 +60,7 @@ class RelType(str, Enum):
     MANAGED_BY = "managed_by"
 
 
-class DataClassification(str, Enum):
+class DataClassification(StrEnum):
     """Data sensitivity classification levels."""
 
     PUBLIC = "public"
@@ -284,8 +283,8 @@ class System(BaseModel):
         """
         try:
             return self.blocks[block_id]
-        except KeyError:
-            raise BlockNotFoundError(block_id)
+        except KeyError as exc:
+            raise BlockNotFoundError(block_id) from exc
 
     def get(self, block_id: str) -> Block | None:
         """Resolve a block ID, returning None if not found.
@@ -583,7 +582,7 @@ class System(BaseModel):
         return self.model_dump(mode="json")
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "System":
+    def from_dict(cls, data: dict[str, Any]) -> System:
         """Reconstruct a System from a dict produced by to_dict().
 
         Args:
@@ -606,7 +605,7 @@ class System(BaseModel):
         return self.model_dump_json(indent=indent)
 
     @classmethod
-    def from_json(cls, json_str: str) -> "System":
+    def from_json(cls, json_str: str) -> System:
         """Reconstruct a System from a JSON string.
 
         Args:

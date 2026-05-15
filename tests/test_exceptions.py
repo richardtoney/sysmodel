@@ -1,5 +1,4 @@
 """Tests for sysmodel.exceptions."""
-import pytest
 
 from sysmodel.exceptions import (
     BlockNotFoundError,
