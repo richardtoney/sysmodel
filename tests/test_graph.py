@@ -56,7 +56,7 @@ def test_cypher_all_blocks(kuzu_graph: KuzuGraph) -> None:
 
 def test_cypher_descendants_via_contains(kuzu_graph: KuzuGraph) -> None:
     result = kuzu_graph.query(
-        "MATCH (root:Block {id: 'acct-01'})-[:Connected*]->(b:Block) "
+        "MATCH (root:Block {id: 'acct-01'})-[:Connected*1..10]->(b:Block) "
         "RETURN b.id"
     )
     ids = {row["b.id"] for row in result}
@@ -78,7 +78,7 @@ def test_cypher_multi_hop_depends_on(dependency_system: System) -> None:
     with KuzuGraph() as g:
         g.load(dependency_system)
         result = g.query(
-            "MATCH (a:Block {id: 'svc-a'})-[r:Connected*]->(dep:Block) "
+            "MATCH (a:Block {id: 'svc-a'})-[r:Connected*1..10]->(dep:Block) "
             "RETURN dep.id"
         )
         ids = {row["dep.id"] for row in result}

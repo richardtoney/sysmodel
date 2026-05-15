@@ -83,8 +83,9 @@ class KuzuGraph:
 
     Verified Cypher patterns::
 
-        -- All descendants via CONTAINS (variable-length path)
-        MATCH (root:Block {id: 'subnet-lan'})-[:Connected* {rel_type: 'contains'}]->(b:Block)
+        -- All descendants (variable-length path, explicit hop bounds)
+        MATCH (root:Block {id: 'subnet-lan'})-[:Connected*1..20]->(b:Block)
+        WHERE b.type <> 'account'
         RETURN b.name, b.type
 
         -- Software on a host (DEPLOYED_ON)
@@ -92,7 +93,7 @@ class KuzuGraph:
         RETURN sw.name, sw.metadata
 
         -- Multi-hop transitive dependency
-        MATCH (a:Block {id: 'svc-a'})-[:Connected* {rel_type: 'depends_on'}]->(dep:Block)
+        MATCH (a:Block {id: 'svc-a'})-[:Connected*1..20]->(dep:Block)
         RETURN dep.name, dep.type
 
         -- Leaf nodes: blocks with no outbound DEPENDS_ON
@@ -252,10 +253,9 @@ class KuzuGraph:
                     },
                 )
 
-        # 6. Assert count
-        result = self._run("MATCH (b:Block) RETURN COUNT(b) AS cnt")
-        row = result.get_next()
-        loaded_count = row[0]
+        # 6. Assert count using the public query() method (handles API compat)
+        count_result = self.query("MATCH (b:Block) RETURN COUNT(b) AS cnt")
+        loaded_count = int(count_result[0]["cnt"]) if count_result else 0
         expected_count = len(system.blocks)
         if loaded_count != expected_count:
             raise GraphLoadError(
@@ -283,7 +283,14 @@ class KuzuGraph:
             raise GraphNotAvailableError()
 
         result = self._run(cypher)
-        columns = result.get_column_names()
+
+        # Handle kuzu>=0.5 (column_names property) and kuzu 0.4.x (get_column_names method)
+        columns: list[str] = (
+            result.column_names
+            if hasattr(result, "column_names")
+            else result.get_column_names()
+        )
+
         rows: list[dict[str, Any]] = []
         while result.has_next():
             raw_row = result.get_next()
